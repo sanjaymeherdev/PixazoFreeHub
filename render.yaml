@@ -9,7 +9,5 @@ services:
     envVars:
       - key: PIXAZO_API_KEY
         sync: false
-      - key: IMGBB_API_KEY
-        sync: false
       - key: NODE_VERSION
         value: 20.11.1

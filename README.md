@@ -74,48 +74,41 @@ Your API key **never reaches the browser** — it stays on the server.
 
 Pixazo's API needs a *publicly reachable URL* for source media (reference
 images, masks, audio, video) — it can't accept a raw file upload directly.
-Every field that expects one now has a **📁 Upload from PC** button next to
-the URL box, so you don't have to host the file yourself first:
+Every field that expects one has a **📁 Upload from PC** button next to
+the URL box, so you don't have to host the file yourself first.
 
-- **Images** (`imageUrl`, `maskUrl`) → uploaded to [imgbb](https://api.imgbb.com/),
-  a free image host. Needs a free `IMGBB_API_KEY` (see below) — no card
-  required.
-- **Audio** (`reference_audio_url`, for VoxCPM2 voice cloning) and
-  **video** (`videoUrl`, for LTX video-to-video) → uploaded to
-  [catbox.moe](https://catbox.moe/), which hosts any file type
-  **anonymously, with no API key or signup at all**, permanently, up to
-  200MB per file.
+Uploads are **self-hosted on this server and deleted right after use** — no
+third-party image/file host, no extra API key to configure:
 
-  *Why not [api.video](https://api.video/pricing/), which also has a "free"
-  tier?* Its free tier is a sandbox: clips are capped at 30 seconds,
-  watermarked, and auto-deleted after 24 hours, and it still requires
-  creating an account and API key. For a plain "get my file a public URL so
-  another API can read it" use case, catbox.moe's anonymous, unwatermarked,
-  permanent hosting is a better fit, so that's what's wired up. (If you'd
-  rather use api.video for video specifically — e.g. for its
-  transcoding/adaptive delivery — swap the `kind === "video"` branch in
-  `server.js`'s `/api/upload` handler for an api.video Direct Upload call;
-  the field-level `upload: "video"` wiring on the frontend doesn't need to
-  change.)
+- Picking a file POSTs it to `/api/upload` (multipart, capped at 40MB per
+  request). It's saved to a local `uploads/` folder and served back at
+  `/uploads/<name>`, which fills the URL box for you.
+- The same code path handles images, audio, and video — there's no
+  per-type branching or separate host to configure.
+- Once Pixazo has actually used the file, it's deleted automatically:
+  - Models that respond immediately (sync) — the file is deleted right
+    after that response comes back.
+  - Models that queue a job (async — video, tracks, etc.) — the file is
+    deleted once `/api/status` reports the job finished, successfully or
+    not.
+  - As a safety net, anything left in `uploads/` for more than 30 minutes
+    (an abandoned flow, a job that never resolves) is swept away by a
+    periodic background check.
 
-Picking a file POSTs it to `/api/upload` (multipart, capped at 40MB per
-request); the server relays it to the right host and fills the URL box with
-the public link it gets back. You can still ignore the button entirely and
-paste a URL by hand — nothing requires the upload flow.
+Because a file only needs to stay reachable for as long as Pixazo takes to
+fetch it, this needs no persistent storage — fine for Railway, Render, or
+any host with an ephemeral filesystem. If your app sits behind a proxy that
+rewrites the public hostname, set `PUBLIC_BASE_URL` (e.g.
+`https://your-app.up.railway.app`) as an env var so the returned upload URL
+is correct; otherwise it's inferred from the incoming request.
+
+You can still ignore the button entirely and paste a public URL by hand —
+nothing requires the upload flow.
 
 ## 1. Get a free Pixazo API key
 
 1. Sign up at https://api-console.pixazo.ai/signup (email only, no card).
 2. Go to the API Key section of the dashboard and copy your key.
-
-## 1b. (Optional) Get a free imgbb API key — for image file-picker uploads
-
-1. Sign up at https://api.imgbb.com/ (email only, no card).
-2. Copy your API key from the dashboard.
-
-Skip this if you're happy pasting public image URLs by hand instead of using
-the upload button — nothing else depends on it. Audio/video uploads
-(catbox.moe) work with no key regardless.
 
 ## 2. Run locally
 
@@ -123,7 +116,7 @@ the upload button — nothing else depends on it. Audio/video uploads
 git clone <this-repo>
 cd pixazo-free-studio
 cp .env.example .env
-# edit .env and paste your PIXAZO_API_KEY (and optionally IMGBB_API_KEY)
+# edit .env and paste your PIXAZO_API_KEY
 
 npm install
 npm start
@@ -144,8 +137,6 @@ Visit http://localhost:3000
    - **Instance Type:** Free
 4. Under **Environment**, add:
    - `PIXAZO_API_KEY` = your key
-   - `IMGBB_API_KEY` = your imgbb key (optional — only needed for the image
-     upload button)
 5. Click **Create Web Service**.
 
 Render's free plan works fine for this app (it may spin down when idle and take

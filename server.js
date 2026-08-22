@@ -3,14 +3,15 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const path = require("path");
+const fs = require("fs");
+const crypto = require("crypto");
 const multer = require("multer");
-const FormData = require("form-data");
 const { MODELS, GATEWAY_BASE, CATEGORIES } = require("./models");
 
 const app = express();
+app.set("trust proxy", true);
 const PORT = process.env.PORT || 3000;
 const PIXAZO_API_KEY = process.env.PIXAZO_API_KEY;
-const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
 
 // In-memory upload buffer, capped at 40MB — enough for a reference image/audio
 // clip or a short source video while staying safe on small free-tier hosts.
@@ -19,6 +20,89 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 40 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// ---------------------------------------------------------------------------
+// Self-hosted, delete-after-use file storage
+//
+// Uploaded reference media (images, audio, video) used to be pushed out to
+// imgbb/catbox to get a public URL. That's gone now — instead the file is
+// written to a local `uploads/` folder and served at /uploads/<name>, which
+// Pixazo can fetch just like any other public URL. Once Pixazo has consumed
+// it, the file is deleted:
+//   - sync models:  deleted right after the /api/generate call returns
+//   - async models: deleted once /api/status reports a terminal state
+//   - safety net:   a periodic sweep deletes anything left over past
+//                    UPLOAD_MAX_AGE_MS (e.g. an abandoned or failed flow)
+// ---------------------------------------------------------------------------
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+app.use("/uploads", express.static(UPLOADS_DIR));
+
+const UPLOAD_MAX_AGE_MS = 30 * 60 * 1000; // safety-net sweep: 30 minutes
+// requestId -> array of filenames to delete once that async job finishes
+const pendingAsyncCleanup = new Map();
+
+function getBaseUrl(req) {
+  if (process.env.PUBLIC_BASE_URL) return process.env.PUBLIC_BASE_URL.replace(/\/$/, "");
+  const proto = req.headers["x-forwarded-proto"] || req.protocol;
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  return `${proto}://${host}`;
+}
+
+function deleteUploadFile(filename) {
+  if (!filename) return;
+  const filePath = path.join(UPLOADS_DIR, path.basename(filename));
+  fs.unlink(filePath, (err) => {
+    if (err && err.code !== "ENOENT") {
+      console.warn(`Failed to delete upload ${filename}:`, err.message);
+    }
+  });
+}
+
+// Find any of our own /uploads/<filename> URLs referenced inside a request
+// body (recursively), so we know what to clean up once Pixazo is done.
+function findLocalUploadFilenames(value, out = []) {
+  if (typeof value === "string") {
+    const matches = value.matchAll(/\/uploads\/([a-zA-Z0-9._-]+)/g);
+    for (const m of matches) out.push(m[1]);
+  } else if (Array.isArray(value)) {
+    value.forEach((v) => findLocalUploadFilenames(v, out));
+  } else if (value && typeof value === "object") {
+    Object.values(value).forEach((v) => findLocalUploadFilenames(v, out));
+  }
+  return out;
+}
+
+const TERMINAL_STATUSES = new Set(["COMPLETED", "SUCCEEDED", "FAILED", "ERROR", "CANCELLED", "CANCELED"]);
+
+// Called from /api/status once a job's status is known. If it's finished
+// (success or failure) and we're tracking uploaded source media for it,
+// delete that media now and stop tracking it.
+function cleanupIfTerminal(requestId, status) {
+  const normalized = String(status || "").toUpperCase();
+  if (!TERMINAL_STATUSES.has(normalized)) return;
+  const filenames = pendingAsyncCleanup.get(requestId);
+  if (!filenames) return;
+  filenames.forEach(deleteUploadFile);
+  pendingAsyncCleanup.delete(requestId);
+}
+
+function sweepOldUploads() {
+  fs.readdir(UPLOADS_DIR, (err, files) => {
+    if (err) return;
+    const now = Date.now();
+    files.forEach((file) => {
+      const filePath = path.join(UPLOADS_DIR, file);
+      fs.stat(filePath, (statErr, stats) => {
+        if (statErr) return;
+        if (now - stats.mtimeMs > UPLOAD_MAX_AGE_MS) {
+          fs.unlink(filePath, () => {});
+        }
+      });
+    });
+  });
+}
+setInterval(sweepOldUploads, 5 * 60 * 1000);
 
 function pixazoHeaders() {
   return {
@@ -59,66 +143,27 @@ app.get("/api/models", (req, res) => {
   res.json(catalog);
 });
 
-// Host a locally-picked file so it has a public URL Pixazo's API can fetch.
-//   - images        -> imgbb (https://api.imgbb.com) — free, needs IMGBB_API_KEY
-//   - audio & video -> catbox.moe — free, anonymous, no key/signup required,
-//                      permanent hosting up to 200MB per file
-// (api.video was evaluated for video hosting but its free sandbox tier
-// watermarks clips, caps them at 30s, and auto-deletes after 24h — a poor
-// fit for feeding a reference clip straight into another API — so catbox.moe
-// is used instead. No account needed on either the app or the user's side.)
+// Host a locally-picked file (image, audio, or video — same code path for
+// all of them) on this server so it has a public URL Pixazo's API can fetch.
+// The file is deleted automatically once Pixazo has used it — see the
+// cleanup hooks in /api/generate and /api/status below, plus the periodic
+// sweep as a safety net for jobs that never reach a terminal state.
 app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file", message: "No file was uploaded." });
     }
-    const kind = (req.body.kind || req.query.kind || "image").toLowerCase();
 
-    if (kind === "image") {
-      if (!IMGBB_API_KEY) {
-        return res.status(500).json({
-          error: "Missing IMGBB_API_KEY",
-          message:
-            "Set IMGBB_API_KEY as an environment variable to enable image uploads. Get a free key (no card) at https://api.imgbb.com/. You can still paste a public image URL directly.",
-        });
-      }
-      const form = new FormData();
-      form.append("image", req.file.buffer, { filename: req.file.originalname || "upload.png" });
-      const response = await axios.post(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, form, {
-        headers: form.getHeaders(),
-        timeout: 60000,
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      });
-      const url = response.data?.data?.url;
-      if (!url) throw new Error("imgbb did not return a URL.");
-      return res.json({ url, host: "imgbb" });
-    }
+    const ext = path.extname(req.file.originalname || "") || "";
+    const filename = `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`;
+    const filePath = path.join(UPLOADS_DIR, filename);
 
-    if (kind === "audio" || kind === "video") {
-      const form = new FormData();
-      form.append("reqtype", "fileupload");
-      form.append("fileToUpload", req.file.buffer, {
-        filename: req.file.originalname || `upload-${Date.now()}`,
-      });
-      const response = await axios.post("https://catbox.moe/user/api.php", form, {
-        headers: form.getHeaders(),
-        timeout: 120000,
-        maxBodyLength: Infinity,
-        maxContentLength: Infinity,
-      });
-      const url = String(response.data || "").trim();
-      if (!url.startsWith("http")) {
-        throw new Error(`Catbox upload failed: ${url || "empty response"}`);
-      }
-      return res.json({ url, host: "catbox" });
-    }
+    await fs.promises.writeFile(filePath, req.file.buffer);
 
-    return res.status(400).json({ error: "Unknown kind", message: `Unsupported upload kind: ${kind}` });
+    const url = `${getBaseUrl(req)}/uploads/${filename}`;
+    return res.json({ url, host: "local", filename });
   } catch (err) {
-    const status = err.response?.status || 500;
-    const data = err.response?.data || { message: err.message };
-    res.status(status).json({ error: "Upload failed", details: data });
+    res.status(500).json({ error: "Upload failed", details: { message: err.message } });
   }
 });
 
@@ -151,15 +196,28 @@ app.post("/api/generate", async (req, res) => {
     const normalized = normalizeParams(model, params);
     const body = model.buildBody(normalized);
     const url = `${GATEWAY_BASE}${model.path}`;
+    const uploadedFilenames = findLocalUploadFilenames(body);
 
-    const response = await axios.post(url, body, {
-      headers: pixazoHeaders(),
-      timeout: 60000,
-    });
+    let response;
+    try {
+      response = await axios.post(url, body, {
+        headers: pixazoHeaders(),
+        timeout: 60000,
+      });
+    } catch (err) {
+      // Pixazo either fetched the source media or rejected the request outright —
+      // either way we're done with the uploaded file(s), so clean up now.
+      uploadedFilenames.forEach(deleteUploadFile);
+      throw err;
+    }
 
     const data = response.data;
 
     if (model.responseMode === "sync") {
+      // Sync models return the finished result in this same call, so Pixazo
+      // has already consumed any source media — safe to delete now.
+      uploadedFilenames.forEach(deleteUploadFile);
+
       // For "image-search" style models, outputField is an array of results.
       if (model.type === "image-search") {
         return res.json({ completed: true, results: data[model.outputField] || [] });
@@ -168,7 +226,12 @@ app.post("/api/generate", async (req, res) => {
       return res.json({ completed: true, mediaUrl });
     }
 
-    // Async: response looks like { request_id, status, polling_url }
+    // Async: response looks like { request_id, status, polling_url }. The job
+    // is still running, so hold off deleting until /api/status sees it finish.
+    if (uploadedFilenames.length && data.request_id) {
+      pendingAsyncCleanup.set(data.request_id, uploadedFilenames);
+    }
+
     return res.json({
       completed: false,
       requestId: data.request_id,
@@ -205,9 +268,11 @@ app.get("/api/status/:modelId/:requestId", async (req, res) => {
         { headers: pixazoHeaders(), timeout: 30000 }
       );
       data = response.data;
+      const normalizedStatus = data.status?.toUpperCase() === "SUCCEEDED" ? "COMPLETED" : (data.status || "PROCESSING").toUpperCase();
+      cleanupIfTerminal(requestId, normalizedStatus);
       // Normalize Pixelforge's shape to look like the standard one.
       return res.json({
-        status: data.status?.toUpperCase() === "SUCCEEDED" ? "COMPLETED" : (data.status || "PROCESSING").toUpperCase(),
+        status: normalizedStatus,
         output: { media_url: data.output ? [].concat(data.output) : [] },
         error: data.error || null,
       });
@@ -220,8 +285,12 @@ app.get("/api/status/:modelId/:requestId", async (req, res) => {
       timeout: 30000,
     });
     data = response.data;
+    cleanupIfTerminal(requestId, data.status);
     res.json(data);
   } catch (err) {
+    // A failed status check doesn't necessarily mean the job is done, so we
+    // don't clean up here — the periodic sweep will catch it eventually if
+    // the job never resolves.
     const status = err.response?.status || 500;
     const data = err.response?.data || { message: err.message };
     res.status(status).json({ error: "Pixazo status check failed", details: data });
@@ -242,8 +311,5 @@ app.listen(PORT, () => {
   console.log(`Pixazo Free Studio running on port ${PORT}`);
   if (!PIXAZO_API_KEY) {
     console.warn("⚠️  PIXAZO_API_KEY is not set. Requests to Pixazo will fail until you set it.");
-  }
-  if (!IMGBB_API_KEY) {
-    console.warn("⚠️  IMGBB_API_KEY is not set. Image file-picker uploads will fail until you set it (audio/video uploads via catbox.moe work without it).");
   }
 });
