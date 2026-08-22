@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pixazo Free Studio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>🎨 Pixazo Free Studio</h1>
+      <p class="subtitle">Generate images, video, and audio using Pixazo's free-tier AI models — no credit card required.</p>
+    </header>
+
+    <div class="layout">
+      <div class="content">
+        <nav id="tabs" class="tabs"></nav>
+
+        <main>
+          <section class="panel">
+            <label for="model-select">Free model</label>
+            <select id="model-select"></select>
+            <p id="model-description" class="hint"></p>
+
+            <div id="fields"></div>
+            <div id="empty-state" class="empty-state" style="display:none;">
+              <p>🚧 No confirmed free model for this category yet.</p>
+              <p class="hint">Pixazo currently only offers this capability on paid tiers. Check
+                <a href="https://www.pixazo.ai/api/free" target="_blank" rel="noopener">the free API docs</a>
+                for updates.</p>
+            </div>
+
+            <button id="generate-btn">Generate</button>
+            <p id="error-msg" class="error"></p>
+          </section>
+
+          <section class="panel result-panel">
+            <h2>Result</h2>
+            <div id="status" class="status"></div>
+            <div id="output"></div>
+          </section>
+        </main>
+      </div>
+
+      <aside class="promo">
+        <div class="promo-card">
+          <span class="promo-badge">🎉 Limited time</span>
+          <h3>Free to test</h3>
+          <p>This tool is free to try for everyone <strong>up to 31 August</strong>.</p>
+          <hr class="promo-divider" />
+          <p class="promo-cta-text">Want your own private server, running 24/7, under your own key?</p>
+          <a
+            class="whatsapp-btn"
+            href="https://wa.me/918984636695?text=Hi%2C%20I%27m%20interested%20in%20getting%20my%20own%20Pixazo%20Free%20Studio%20server%20for%20Rs.%20500%2Fmonth."
+            target="_blank"
+            rel="noopener"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.288.173-1.412-.074-.124-.272-.198-.57-.347z"/>
+              <path d="M12.01 2C6.486 2 2 6.486 2 12.01c0 1.973.573 3.902 1.652 5.556L2 22l4.554-1.62A9.96 9.96 0 0 0 12.01 22C17.534 22 22 17.514 22 11.99 22 6.466 17.534 2 12.01 2zm0 18.02c-1.7 0-3.365-.457-4.822-1.32l-.346-.204-2.703.961.936-2.634-.226-.353A8.01 8.01 0 1 1 20.02 12c0 4.423-3.6 8.02-8.01 8.02z"/>
+            </svg>
+            Get your own server — ₹500/mo
+          </a>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      <p>Free models only · Flux Schnell · SDXL · SDXL Lightning · SD Inpainting · PixelForge Relighting · PixelForge V2 Search · LTX · VoxCPM2 · Pixazo Tracks —
+        <a href="https://www.pixazo.ai/api/free" target="_blank" rel="noopener">Pixazo Free API docs</a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

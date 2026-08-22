@@ -1,0 +1,22 @@
+{
+  "name": "pixazo-free-studio",
+  "version": "1.0.0",
+  "description": "A tabbed web studio (Text to Image, Image Edit, Text to Video, Video to Video, Image to Video, Voice Clone, Voice Generation, Tracks/Music) for Pixazo API's confirmed free-tier models, with per-model configurable parameters.",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "form-data": "^4.0.0",
+    "multer": "^2.2.0"
+  }
+}

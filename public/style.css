@@ -1,0 +1,352 @@
+:root {
+  --bg: #0f1115;
+  --panel: #171a21;
+  --border: #262b36;
+  --text: #e8eaed;
+  --muted: #8b93a7;
+  --accent: #7c5cff;
+  --accent-2: #22d3ee;
+  --error: #ff6b6b;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top, #1a1d27, var(--bg) 60%);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 20px 60px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+header h1 {
+  font-size: 2rem;
+  margin-bottom: 6px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (min-width: 980px) {
+  .layout { grid-template-columns: 1fr 260px; }
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 6px;
+  justify-content: flex-start;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+  scrollbar-width: thin;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  padding: 10px 14px;
+  border-radius: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab.active {
+  background: none;
+  border-bottom: 2px solid var(--accent);
+  color: var(--text);
+}
+
+main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+
+@media (min-width: 720px) {
+  main { grid-template-columns: 1fr 1fr; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+select, input, textarea {
+  width: 100%;
+  background: #0d0f14;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  margin-bottom: 14px;
+}
+
+select:focus, input:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+textarea { resize: vertical; min-height: 90px; }
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: -6px 0 16px;
+}
+
+.field-hint {
+  display: block;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.field-range {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin: -10px 0 14px;
+}
+
+.upload-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.upload-row input[type="url"] {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.upload-btn {
+  flex-shrink: 0;
+  display: inline-block;
+  width: auto;
+  margin: 0;
+  padding: 10px 14px;
+  background: #0d0f14;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.upload-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.upload-status {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: -8px 0 14px;
+}
+
+.upload-status.processing { color: var(--accent-2); }
+.upload-status.completed { color: #4ade80; }
+.upload-status.failed { color: var(--error); }
+
+.empty-state {
+  background: #0d0f14;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  margin: 0 0 8px;
+}
+
+.empty-state p:last-child {
+  margin-bottom: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: #0f1115;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+button:hover { opacity: 0.9; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error {
+  color: var(--error);
+  font-size: 0.85rem;
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+
+.result-panel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.status {
+  font-size: 0.9rem;
+  color: var(--muted);
+  margin-bottom: 14px;
+}
+
+.status.processing { color: var(--accent-2); }
+.status.completed { color: #4ade80; }
+.status.failed { color: var(--error); }
+
+#output img, #output video {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+#output audio { width: 100%; }
+
+footer {
+  text-align: center;
+  margin-top: 40px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+footer a { color: var(--accent-2); }
+
+.promo {
+  position: sticky;
+  top: 24px;
+}
+
+.promo-card {
+  background: linear-gradient(160deg, #1c2130, var(--panel) 60%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: left;
+}
+
+.promo-badge {
+  display: inline-block;
+  background: rgba(124, 92, 255, 0.15);
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  color: var(--accent-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.promo-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.promo-card p {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.promo-card p strong {
+  color: var(--text);
+}
+
+.promo-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 14px 0;
+}
+
+.promo-cta-text {
+  margin-bottom: 12px !important;
+}
+
+.whatsapp-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  background: #25d366;
+  color: #06210f;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  border-radius: 10px;
+  transition: opacity 0.15s ease;
+}
+
+.whatsapp-btn:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 979px) {
+  .promo { position: static; }
+}

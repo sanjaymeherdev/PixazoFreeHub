@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: pixazo-free-studio
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: PIXAZO_API_KEY
+        sync: false
+      - key: IMGBB_API_KEY
+        sync: false
+      - key: NODE_VERSION
+        value: 20.11.1
