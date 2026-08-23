@@ -240,6 +240,7 @@ app.post("/api/generate", async (req, res) => {
   } catch (err) {
     const status = err.response?.status || 500;
     const data = err.response?.data || { message: err.message };
+    console.error(`Pixazo /api/generate error [${status}]:`, JSON.stringify(data));
     res.status(status).json({ error: "Pixazo request failed", details: data });
   }
 });
