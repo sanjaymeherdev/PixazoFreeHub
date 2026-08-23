@@ -374,18 +374,48 @@ const MODELS = {
   // ======================= TRACKS (MUSIC) =======================
 
   "tracks-music": {
-    label: "Pixazo Tracks (Music)",
+    label: "Pixazo Tracks (Text to Song)",
     category: "music",
     type: "audio",
-    description: "Text-to-music: generate an instrumental track from a prompt. Async job.",
+    description: "Text-to-song: full music + optional lyrics/vocals, with structure tags like [verse]/[chorus]/[bridge]. Async job.",
     method: "POST",
-    path: "/tracks/generate-music",
+    // Confirmed spec: https://www.pixazo.ai/models/tracks#doc-tracks-generate-music-code
+    path: "/tracks/v1/generate",
     responseMode: "async",
     statusMode: "v2",
     fields: [
-      { name: "prompt", type: "textarea", required: true, placeholder: "lo-fi hip hop beat, chill, no vocals" },
+      { name: "prompt", type: "textarea", required: true, placeholder: "A cinematic Hans Zimmer style orchestral piece, building tension with heavy percussion and brass, epic atmosphere" },
+      { name: "lyrics", type: "textarea", default: "", placeholder: "[verse]\nyour lyrics here\n\n[chorus]\n...\n\nLeave empty for instrumental music." },
+      { name: "instrumental", type: "checkbox", default: false, hint: "When on, forces a purely instrumental track — any lyrics above are ignored." },
+      { name: "duration", type: "number", default: 30, min: 10, max: 600, step: 5, hint: "Seconds. 10–600 (10 min max)." },
+      { name: "bpm", type: "number", default: "", min: 30, max: 300, step: 1, hint: "Leave blank for auto (inferred from prompt)." },
+      { name: "key", type: "text", default: "", placeholder: "e.g. E minor (leave blank for auto)" },
+      { name: "time_signature", type: "select", default: "auto", options: ["auto", "4/4", "3/4", "6/8"] },
+      { name: "batch_size", type: "number", default: 1, min: 1, max: 4, step: 1, hint: "Number of variations to generate (capped at 4)." },
+      { name: "thinking", type: "checkbox", default: false, hint: "Plan song structure before generating — better adherence, slower." },
+      { name: "infer_steps", type: "number", default: "", min: 1, max: 100, hint: "Higher = better quality, slower. Leave blank for model default." },
+      { name: "guidance_scale", type: "number", default: "", min: 1, max: 20, step: 0.5, hint: "Prompt adherence strength, typical 3–7. Leave blank for model default." },
+      { name: "seed", type: "number", default: -1, hint: "-1 for random; reuse a seed for reproducible output." },
     ],
-    buildBody: ({ prompt }) => ({ prompt }),
+    buildBody: ({ prompt, lyrics, instrumental, duration, bpm, key, time_signature, batch_size, thinking, infer_steps, guidance_scale, seed }) => {
+      const body = {
+        prompt,
+        lyrics: lyrics || "",
+        instrumental: instrumental === true || instrumental === "true" || instrumental === "on",
+        duration: Number(duration) || 30,
+        seed: seed === "" || seed === undefined ? -1 : Number(seed),
+      };
+      // Optional fields: only send when the user actually set them, so the
+      // API's own "auto" behavior applies instead of us forcing a default.
+      if (bpm !== "" && bpm !== undefined) body.bpm = Number(bpm);
+      if (key) body.key = key;
+      if (time_signature && time_signature !== "auto") body.time_signature = time_signature;
+      if (batch_size !== "" && batch_size !== undefined) body.batch_size = Math.min(4, Math.max(1, Number(batch_size) || 1));
+      if (thinking === true || thinking === "true" || thinking === "on") body.thinking = true;
+      if (infer_steps !== "" && infer_steps !== undefined) body.infer_steps = Number(infer_steps);
+      if (guidance_scale !== "" && guidance_scale !== undefined) body.guidance_scale = Number(guidance_scale);
+      return body;
+    },
   },
 };
 

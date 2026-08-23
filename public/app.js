@@ -132,6 +132,11 @@ function fieldInputHtml(f) {
     return `<input type="text" id="${id}" value="${defaultVal}" placeholder="${f.placeholder || ""}" />`;
   }
 
+  if (f.type === "checkbox") {
+    const checked = f.default === true ? "checked" : "";
+    return `<input type="checkbox" id="${id}" ${checked} />`;
+  }
+
   // textarea (default)
   return `<textarea id="${id}" placeholder="${f.placeholder || ""}">${defaultVal}</textarea>`;
 }
@@ -220,7 +225,11 @@ function collectParams() {
   for (const f of currentModel.fields) {
     const el = document.getElementById(`field-${f.name}`);
     if (f.type === "number") clampNumberInput(el);
-    params[f.name] = el.value.trim ? el.value.trim() : el.value;
+    if (f.type === "checkbox") {
+      params[f.name] = el.checked;
+    } else {
+      params[f.name] = el.value.trim ? el.value.trim() : el.value;
+    }
   }
   return params;
 }
