@@ -104,31 +104,6 @@ const MODELS = {
     }),
   },
 
-  "sdxl-lightning": {
-    label: "SDXL Lightning",
-    category: "text-to-image",
-    type: "image",
-    description: "Distilled few-step SDXL variant — fast, free.",
-    method: "POST",
-    path: "/sdxl_lightning/getImage/v1/getSDXLImage",
-    responseMode: "sync",
-    outputField: "imageUrl",
-    fields: [
-      { name: "prompt", type: "textarea", required: true, placeholder: "cyberpunk street market at night, neon signs" },
-      { name: "width", type: "number", default: 1024, min: 512, max: 1536, step: 64 },
-      { name: "height", type: "number", default: 1024, min: 512, max: 1536, step: 64 },
-      { name: "num_steps", type: "number", default: 8, min: 1, max: 8, step: 1 },
-      { name: "guidance", type: "number", default: 5, min: 0, max: 10, step: 0.5 },
-    ],
-    buildBody: ({ prompt, width, height, num_steps, guidance }) => ({
-      prompt,
-      width: Number(width),
-      height: Number(height),
-      num_steps: Number(num_steps),
-      guidance: Number(guidance),
-    }),
-  },
-
   "pixelforge-v2-search": {
     label: "PixelForge V2 (Library Search)",
     category: "text-to-image",
