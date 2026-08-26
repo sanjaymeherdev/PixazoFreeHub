@@ -203,7 +203,7 @@ const MODELS = {
     statusMode: "v2",
     fields: [
       { name: "prompt", type: "textarea", required: true, placeholder: "drone shot over a foggy forest at dawn" },
-      { name: "aspect", type: "select", default: "auto", options: ["auto", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], hint: "Overrides width/height." },
+      { name: "aspect", type: "select", default: "auto", options: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"], hint: "Overrides width/height." },
       { name: "num_frames", type: "number", default: 121, min: 9, max: 241, step: 8, hint: "8k+1 form, e.g. 121, 161, 241." },
       { name: "frame_rate", type: "number", default: 24, min: 1, max: 60, step: 1 },
       { name: "enhance_prompt", type: "select", default: "false", options: ["false", "true"], hint: "Auto-enrich the prompt before generation." },
