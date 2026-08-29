@@ -231,7 +231,7 @@ const MODELS = {
     fields: [
       { name: "prompt", type: "textarea", required: true, placeholder: "the camera slowly pushes in as the scene comes alive" },
       { name: "imageUrl", type: "url", required: true, upload: "image", placeholder: "https://example.com/source.jpg (public URL)" },
-      { name: "aspect", type: "select", default: "auto", options: ["auto", "16:9", "9:16", "1:1", "4:3", "3:4", "21:9"] },
+      { name: "aspect", type: "select", default: "auto", options: ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"] },
       { name: "num_frames", type: "number", default: 121, min: 9, max: 241, step: 8 },
       { name: "frame_rate", type: "number", default: 24, min: 1, max: 60, step: 1 },
     ],
